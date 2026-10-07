@@ -206,3 +206,10 @@ task-view/
 - 実測（1366×768）: 1行 43px（長いタイトルは2行 67px で省略）。案件A グループ別 1583px → 1148px、期限別 1706px → 1141px。行ごとの開閉見出し 0。文字色は 4 色（本文・補足・赤・橙）。
 - まだ: 受け入れ基準1（案件Aが 768px でスクロールなし）は未達。グループ見出しの余白やメモの扱いをもう一段詰めるか、SIR0 が使ってから決める。
 - 次の候補: 待ちに「いつから」（日数表示）、最終更新が古いときの知らせ。
+
+## 13. 2026-10-07 GitHub で公開（会社の PC に入れるため）
+
+- https://github.com/sir0oo/task-view （公開）。会社の PC では Code → Download ZIP で落とし、`task-view-main` を案件フォルダの並ぶフォルダに置いて `start.bat`。
+- `start.bat` は task-view の1つ上のフォルダを読む。そのとき task-view 自身の `sample-data/` は除く（テストあり）。`run.bat` は見本データ用。
+- GitHub の zip で `.bat` が LF になって壊れないよう、`*.bat -text` で CRLF のまま保存。実際に GitHub の zip を落として、日本語のパスの下で `start.bat` が動くのを確認した。
+- 更新手順はプロジェクトの `CLAUDE.md` に書いた（subtree split → push）。
