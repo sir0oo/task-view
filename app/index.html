@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>タスクビュー</title>
+<style>
+  :root {
+    --bg: #f5f4f0; --surface: #ffffff; --ink: #1f2328; --muted: #6b7075; --line: #e3e1da;
+    --overdue: #c62f2f; --week: #9a5a12; --month: #2f6fbd; --later: #7a8591; --undecided: #8a7bb0;
+    --chip-bg: #efede6;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17181a; --surface: #202225; --ink: #e8e8e6; --muted: #9aa0a6; --line: #32353a;
+      --overdue: #ef6b6b; --week: #f0a24f; --month: #6aa5ee; --later: #98a3ae; --undecided: #b3a5d6;
+      --chip-bg: #2a2d31;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Yu Gothic UI", "Meiryo UI", system-ui, sans-serif; line-height: 1.6;
+  }
+  header {
+    position: sticky; top: 0; z-index: 2; background: var(--bg);
+    border-bottom: 1px solid var(--line); padding: 14px 24px 0;
+  }
+  .top { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  h1 { font-size: 18px; margin: 0; letter-spacing: .02em; }
+  .today { color: var(--muted); font-size: 14px; }
+  .spacer { flex: 1; }
+  button.refresh {
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+    border-radius: 8px; padding: 4px 12px; font: inherit; font-size: 13px; cursor: pointer;
+  }
+  button.refresh:hover { border-color: var(--muted); }
+  .updated { color: var(--muted); font-size: 12px; }
+  nav { display: flex; gap: 4px; margin-top: 10px; overflow-x: auto; }
+  nav button {
+    border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 14px;
+    padding: 8px 14px; border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap;
+  }
+  nav button:hover { color: var(--ink); }
+  nav button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+  nav .count { font-size: 11px; margin-left: 6px; padding: 1px 7px; border-radius: 99px; background: var(--chip-bg); }
+  nav .count.alert { background: var(--overdue); color: #fff; }
+
+  main { max-width: 920px; margin: 0 auto; padding: 20px 24px 60px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+  .seg[hidden] { display: none; }
+  .seg button { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 13px; padding: 4px 12px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+  /* 1行のタスク。色は期限の文字だけ（期限切れ＝赤、7日以内＝橙）。他の区別はすべて文字で書く */
+  .uhead { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 14px; color: var(--muted); margin-bottom: 12px; }
+  .uhead b { color: var(--overdue); }
+  .ulist, .gp { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+  .glist { display: flex; flex-direction: column; gap: 14px; }
+  .usec { padding: 10px 16px 6px; font-size: 13px; font-weight: 700; color: var(--muted); border-top: 1px solid var(--line); }
+  .ulist > .usec:first-child { border-top: 0; }
+  .urow { display: flex; gap: 14px; align-items: baseline; padding: 9px 16px; border-top: 1px solid var(--line); cursor: pointer; }
+  .usec + .urow, .usec + .uwait { border-top-style: dashed; }
+  .urow:hover { background: var(--bg); }
+  .urow:focus-visible, .gsum:focus-visible, .udone > summary:focus-visible { outline: 2px solid var(--month); outline-offset: -2px; }
+  .ut { flex: 1; min-width: 0; font-size: 15px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .uwhere { font-size: 13px; color: var(--muted); margin-left: 8px; }
+  .uq { font-size: 13px; color: var(--muted); margin-left: 6px; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; white-space: nowrap; }
+  .uq.first { margin-left: 0; }
+  .ud { font-size: 13px; white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .ud.overdue { color: var(--overdue); font-weight: 700; }
+  .ud.week { color: var(--week); font-weight: 700; }
+  .udetail { padding: 0 16px 10px; font-size: 13px; color: var(--muted); line-height: 1.6; white-space: pre-wrap; }
+  .uwait { display: flex; gap: 10px; align-items: baseline; padding: 8px 16px; border-top: 1px solid var(--line); font-size: 14px; }
+  .uwt { flex: 1; min-width: 0; }
+  .uwait .who { font-weight: 600; }
+  .udone { border-top: 1px solid var(--line); padding: 8px 16px; }
+  .udone > summary { font-size: 13px; color: var(--muted); cursor: pointer; }
+  .udone ul { list-style: none; margin: 6px 0 0; padding: 0; }
+  .udone li { font-size: 13px; color: var(--muted); padding: 3px 0; }
+  .udone .d { font-variant-numeric: tabular-nums; margin-right: 8px; }
+
+  /* グループ別の見出し */
+  .gsum { display: flex; align-items: baseline; gap: 4px 14px; flex-wrap: wrap; padding: 12px 16px; cursor: pointer; list-style: none; }
+  .gsum::-webkit-details-marker { display: none; }
+  .chev { width: 7px; height: 7px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-45deg); transition: transform .15s; flex-shrink: 0; align-self: center; }
+  .gp[open] > .gsum .chev { transform: rotate(45deg); }
+  .gname { font-size: 16px; font-weight: 700; }
+  .gstat, .gprog { font-size: 13px; color: var(--muted); }
+  .gprog { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .updated.foot { margin-top: 12px; }
+
+  .empty { color: var(--muted); font-size: 14px; padding: 20px 0; }
+  .err { color: var(--overdue); padding: 24px; }
+  @media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>タスクビュー</h1>
+    <span class="today" id="today"></span>
+    <span class="spacer"></span>
+    <div class="seg" id="seg" role="group" aria-label="表示の切り替え">
+      <button data-view="due">期限別</button><button data-view="group">グループ別</button>
+    </div>
+    <span class="updated" id="generated"></span>
+    <button class="refresh" id="refresh">再読み込み</button>
+  </div>
+  <nav id="tabs" role="tablist"></nav>
+</header>
+<main id="main"></main>
+
+<script>
+const BUCKETS = [
+  { key: "overdue",   label: "期限切れ" },
+  { key: "week",      label: "7日以内" },
+  { key: "month",     label: "今月中" },
+  { key: "later",     label: "それ以降" },
+  { key: "undecided", label: "期限未定" },
+];
+const BUCKET_BY_KEY = Object.fromEntries(BUCKETS.map(b => [b.key, b]));
+let state = {
+  data: null,
+  current: localStorage.getItem("taskview.project"),
+  view: localStorage.getItem("taskview.view") === "group" ? "group" : "due",
+};
+
+function el(tag, props = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") e.className = v;
+    else if (k === "style") e.setAttribute("style", v);
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null) e.append(kid.nodeType ? kid : document.createTextNode(kid));
+  return e;
+}
+
+function leftText(t) {
+  if (t.days_left == null) return "";
+  if (t.days_left < 0) return `${-t.days_left}日超過`;
+  if (t.days_left === 0) return "今日まで";
+  return `あと${t.days_left}日`;
+}
+
+// 期限の欄は文字だけで伝える: 「10/9 ・ あと2日」。日付が読めないものは原文、未設定は「—」
+function dueText(t) {
+  const label = /^(期限)?未設定$|^なし$/.test(t.due_label) ? "—" : t.due_label;
+  return [label, leftText(t), t.extended ? "延長" : ""].filter(Boolean).join(" ・ ");
+}
+
+// タスク1行。色は期限切れ（赤）と7日以内（橙）の期限の文字だけ。クリックでメモ・由来をその場に開く
+function taskRow(t, where) {
+  const detail = [t.memo, t.extended ? `延長（旧：${t.extended_from}）` : "", t.origin ? "由来：" + t.origin : ""]
+    .filter(Boolean).join("\n");
+  const row = el("div", { class: "urow", tabindex: "0", title: t.due ? `期限 ${t.due}` : "期限なし" },
+    el("div", { class: "ut" }, t.title,
+      t.needs_check ? el("span", { class: "uq" }, "? 未確認") : null,
+      t.waiting ? el("span", { class: "uq" }, "待ち") : null,
+      where ? el("span", { class: "uwhere" }, where) : null),
+    el("div", { class: "ud " + t.bucket }, dueText(t)));
+  const toggle = () => {
+    const next = row.nextElementSibling;
+    if (next && next.classList.contains("udetail")) next.remove();
+    else if (detail) row.after(el("div", { class: "udetail" }, detail));
+  };
+  row.addEventListener("click", toggle);
+  row.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+  return row;
+}
+
+function summaryLine(tasks, extra = null) {
+  const n = k => tasks.filter(t => t.bucket === k).length;
+  const unchecked = tasks.filter(t => t.needs_check).length;
+  return el("div", { class: "uhead" },
+    n("overdue") ? el("b", {}, `期限切れ ${n("overdue")}`) : el("span", {}, "期限切れ 0"),
+    el("span", {}, `7日以内 ${n("week")}`),
+    el("span", {}, `進行中 ${tasks.length}`),
+    extra,
+    unchecked ? el("span", {}, `うち未確認 ${unchecked}`) : null);
+}
+
+function groupModel(p) {
+  const m = new Map();
+  const get = name => { if (!m.has(name)) m.set(name, { name, tasks: [], waiting: [], done: [] }); return m.get(name); };
+  p.tasks.forEach(t => get(t.group || "").tasks.push(t));
+  p.waiting.forEach(w => get(w.group || "").waiting.push(w));
+  p.done.forEach(d => get(d.group || "").done.push(d));
+  const rank = g => g.tasks.length ? BUCKETS.findIndex(b => b.key === g.tasks[0].bucket) : 99;
+  return [...m.values()].sort((a, b) => (a.name === "") - (b.name === "") || rank(a) - rank(b));
+}
+
+function waitRow(w, showGroup) {
+  return el("div", { class: "uwait" }, el("span", { class: "uq first" }, "待ち"),
+    el("span", { class: "uwt" }, el("span", { class: "who" }, w.who), "：", w.text,
+      showGroup && w.group ? el("span", { class: "uwhere" }, w.group) : null));
+}
+
+function doneBlock(done, open, showGroup) {
+  return el("details", { class: "udone", ...(open ? { open: "" } : {}) },
+    el("summary", {}, `完了 ${done.length}件`),
+    el("ul", {}, done.map(d => el("li", {}, el("span", { class: "d" }, d.date), d.text,
+      showGroup && d.group ? el("span", { class: "uwhere" }, d.group) : null))));
+}
+
+// グループ別: 見出し「PRJ-101  進行中 5 ・ 待ち 2  完了 2/7」の下に、タスク → 待ち → 完了（折りたたみ）
+function groupPanel(g) {
+  const finished = !g.tasks.length && !g.waiting.length && g.done.length > 0;
+  const stat = finished ? "すべて完了" : [`進行中 ${g.tasks.length}`, g.waiting.length ? `待ち ${g.waiting.length}` : null]
+    .filter(Boolean).join(" ・ ");
+  const total = g.tasks.length + g.done.length;
+  return el("details", { class: "gp", open: "" },
+    el("summary", { class: "gsum" },
+      el("span", { class: "chev" }),
+      el("span", { class: "gname" }, g.name || "（グループなし）"),
+      el("span", { class: "gstat" }, stat),
+      g.done.length ? el("span", { class: "gprog" }, `完了 ${g.done.length}/${total}`) : null),
+    g.tasks.map(t => taskRow(t)),
+    g.waiting.map(w => waitRow(w, false)),
+    g.done.length ? doneBlock(g.done, finished, false) : null);
+}
+
+// 全案件タブ: 期限切れ（古い順）→ 今日・明日 → 7日以内。案件名を必ず行に付ける
+const ALL = "__all__";
+const URGENT = ["overdue", "week"];
+
+function urgentTasks(projects) {
+  return projects.flatMap(p => p.tasks.filter(t => URGENT.includes(t.bucket)).map(t => ({ ...t, project: p.name })))
+    .sort((a, b) => URGENT.indexOf(a.bucket) - URGENT.indexOf(b.bucket) || a.due.localeCompare(b.due));
+}
+
+function renderAll(main, projects) {
+  const items = urgentTasks(projects);
+  const sections = [
+    ["期限切れ", t => t.bucket === "overdue"],
+    ["今日・明日", t => t.bucket === "week" && t.days_left <= 1],
+    ["7日以内", t => t.bucket === "week" && t.days_left > 1],
+  ].map(([label, test]) => [label, items.filter(test)]);
+  const unchecked = items.filter(t => t.needs_check).length;
+  const head = el("div", { class: "uhead" },
+    sections.map(([label, rows], i) => el(i === 0 && rows.length ? "b" : "span", {}, `${label} ${rows.length}`)),
+    unchecked ? el("span", {}, `うち未確認 ${unchecked}`) : null,
+    el("span", {}, `${projects.length}案件から`));
+  if (!items.length) {
+    main.replaceChildren(el("div", {}, head, el("div", { class: "empty" }, "期限切れと7日以内のタスクはありません。")));
+    return;
+  }
+  const list = el("div", { class: "ulist" });
+  for (const [label, rows] of sections) {
+    if (!rows.length) continue;
+    list.append(el("div", { class: "usec" }, `${label}（${rows.length}）`),
+      ...rows.map(t => taskRow(t, [t.project, t.group].filter(Boolean).join(" ・ "))));
+  }
+  main.replaceChildren(el("div", {}, head, list));
+}
+
+function render() {
+  const { data } = state;
+  document.getElementById("today").textContent = `${data.today}（${data.weekday}）`;
+  document.getElementById("generated").textContent = `読み込み ${data.generated}`;
+  const names = data.projects.map(p => p.name);
+  if (state.current !== ALL && !names.includes(state.current)) state.current = names.length > 1 ? ALL : (names[0] ?? null);
+  if (state.current === ALL && names.length < 2) state.current = names[0] ?? null;
+
+  const select = name => { state.current = name; localStorage.setItem("taskview.project", name); render(); };
+  const tabs = document.getElementById("tabs");
+  const urgent = urgentTasks(data.projects);
+  const allTab = names.length > 1 ? el("button", {
+    role: "tab", "aria-selected": String(state.current === ALL), onclick: () => select(ALL),
+  }, "全案件の急ぎ", el("span", { class: "count" + (urgent.some(t => t.bucket === "overdue") ? " alert" : "") }, String(urgent.length))) : null;
+  tabs.replaceChildren(...[allTab].filter(Boolean), ...data.projects.map(p => {
+    const overdue = p.tasks.filter(t => t.bucket === "overdue").length;
+    return el("button", {
+      role: "tab", "aria-selected": String(p.name === state.current), onclick: () => select(p.name),
+    }, p.name, el("span", { class: "count" + (overdue ? " alert" : "") }, String(p.tasks.length)));
+  }));
+
+  const main = document.getElementById("main");
+  main.className = "all";
+  document.getElementById("seg").hidden = state.current === ALL;
+  if (state.current === ALL) { renderAll(main, data.projects); return; }
+  const p = data.projects.find(x => x.name === state.current);
+  if (!p) {
+    main.replaceChildren(el("div", { class: "empty" }, "タスク一覧.md が見つかりません。--init で案件フォルダに雛形を作れます。"));
+    return;
+  }
+  if (p.error) { main.replaceChildren(el("div", { class: "err" }, "読み込みエラー: " + p.error)); return; }
+
+  const fileInfo = el("div", { class: "updated foot" }, `${p.file}　最終更新 ${p.updated ?? "不明"}`);
+
+  if (state.view === "group") {
+    // グループ（プロジェクト／チケット）が入れ物。待ち・完了も同じグループに入る
+    const groups = groupModel(p);
+    main.replaceChildren(el("div", {}, summaryLine(p.tasks, p.waiting.length ? el("span", {}, `待ち ${p.waiting.length}`) : null),
+      groups.length ? el("div", { class: "glist" }, groups.map(groupPanel)) : el("div", { class: "empty" }, "タスクはありません。"),
+      fileInfo));
+    return;
+  }
+
+  // 期限別: 区分の見出しの下に1行ずつ。待ち・完了はその下にまとめる
+  const list = el("div", { class: "ulist" });
+  for (const b of BUCKETS) {
+    const items = p.tasks.filter(t => t.bucket === b.key);
+    if (!items.length) continue;
+    list.append(el("div", { class: "usec" }, `${b.label}（${items.length}）`), ...items.map(t => taskRow(t, t.group)));
+  }
+  if (p.waiting.length) {
+    list.append(el("div", { class: "usec" }, `他の人に待っている（${p.waiting.length}）`), ...p.waiting.map(w => waitRow(w, true)));
+  }
+  if (p.done.length) list.append(doneBlock(p.done, false, true));
+  main.replaceChildren(el("div", {}, summaryLine(p.tasks, p.waiting.length ? el("span", {}, `待ち ${p.waiting.length}`) : null),
+    list.children.length ? list : el("div", { class: "empty" }, "タスクはありません。"), fileInfo));
+}
+
+async function load() {
+  try {
+    const res = await fetch("/api/tasks", { cache: "no-store" });
+    state.data = await res.json();
+    render();
+  } catch (e) {
+    document.getElementById("main").replaceChildren(el("div", { class: "err" }, "読み込みに失敗しました: " + e));
+  }
+}
+function syncSeg() {
+  for (const b of document.querySelectorAll("#seg button")) {
+    b.setAttribute("aria-pressed", String(b.dataset.view === state.view));
+  }
+}
+document.getElementById("seg").addEventListener("click", e => {
+  const v = e.target.dataset?.view;
+  if (!v) return;
+  state.view = v;
+  localStorage.setItem("taskview.view", v);
+  syncSeg();
+  if (state.data) render();
+});
+syncSeg();
+document.getElementById("refresh").addEventListener("click", load);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+load();
+</script>
+</body>
+</html>
