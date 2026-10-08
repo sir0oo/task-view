@@ -278,7 +278,8 @@ def build_payload(root: Path) -> dict:
         data["file"] = str(p.relative_to(root)).replace("\\", "/")
         projects.append(data)
     return {"today": today.isoformat(), "weekday": "月火水木金土日"[today.weekday()],
-            "generated": datetime.now().strftime("%H:%M:%S"), "projects": projects}
+            "generated": datetime.now().strftime("%H:%M:%S"), "projects": projects,
+            "ui": (HERE / "index.html").stat().st_mtime_ns}  # 画面が古いまま開かれていたら、画面側で開き直す
 
 
 # ---------- サーバー ----------

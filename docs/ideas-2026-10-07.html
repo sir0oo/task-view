@@ -1,0 +1,206 @@
+<title>タスクビュー 機能案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap">
+<style>
+/* 1カラムの読み物。上におすすめの順番、中ほどに「全案件の急ぎ」タブの見本、下に全候補の一覧 */
+:root {
+  --bg: #f4f5f3; --surface: #ffffff; --ink: #1d2124; --muted: #5d6468; --line: #dfe2de;
+  --accent: #2b5d8a; --red: #b42727; --orange: #9a5a12; --soft: #eef1ee; --new: #1f6b4a;
+  --font-body: "BIZ UDPGothic", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #16191b; --surface: #1f2326; --ink: #e6e8e6; --muted: #a3aaae; --line: #33393d;
+  --accent: #7fb0dc; --red: #f07a7a; --orange: #eba25c; --soft: #262b2e; --new: #6fcf9f; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #16191b; --surface: #1f2326; --ink: #e6e8e6; --muted: #a3aaae; --line: #33393d;
+  --accent: #7fb0dc; --red: #f07a7a; --orange: #eba25c; --soft: #262b2e; --new: #6fcf9f; color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.75; margin: 0; }
+.wrap { max-width: 880px; margin: 0 auto; padding-inline: 20px; padding-block: 32px 80px; }
+h1 { font-size: 28px; line-height: 1.35; margin: 0 0 6px; text-wrap: balance; }
+.lead { color: var(--muted); margin: 0 0 28px; max-width: 68ch; }
+h2 { font-size: 21px; margin: 48px 0 12px; padding-top: 16px; border-top: 2px solid var(--ink); text-wrap: balance; }
+h3 { font-size: 17px; margin: 24px 0 6px; }
+p, li { max-width: 68ch; }
+ul, ol { padding-left: 1.3em; }
+li + li { margin-top: 6px; }
+a { color: var(--accent); }
+.src { font-size: 13px; color: var(--muted); }
+.src a { word-break: break-all; }
+code { font-family: "BIZ UDGothic", Consolas, monospace; font-size: .92em; background: var(--soft); padding: 1px 5px; border-radius: 3px; }
+
+.steps { display: grid; gap: 10px; counter-reset: step; padding: 0; list-style: none; }
+.steps li { max-width: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px 12px 52px; position: relative; margin: 0; }
+.steps li::before { counter-increment: step; content: counter(step); position: absolute; left: 16px; top: 12px; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: var(--surface); font-size: 13px; font-weight: 700; display: grid; place-items: center; }
+.steps b { display: block; }
+.steps span { color: var(--muted); font-size: 14px; }
+
+.tbl { overflow-x: auto; margin: 12px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 640px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 13px; color: var(--muted); font-weight: 700; white-space: nowrap; }
+td:first-child { font-weight: 700; }
+.w { white-space: nowrap; }
+.pill { display: inline-block; font-size: 12px; font-weight: 700; padding: 0 7px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.pill.top { border-color: var(--ink); color: var(--ink); }
+.pill.bug { background: var(--red); border-color: var(--red); color: var(--surface); }
+.pill.no { text-decoration: line-through; }
+
+/* 見本: タスクビュー本体と同じ作り（色は期限の赤・橙だけ。「新」は文字で示す） */
+.mock { --m-bg: #ffffff; --m-ink: #1f2328; --m-muted: #5f656b; --m-line: #e3e1da; --m-red: #b42727; --m-orange: #9a5a12; --m-pg: #f5f4f0;
+  background: var(--m-pg); color: var(--m-ink); border: 1px solid var(--line); border-radius: 8px; padding: 14px; font-family: "Yu Gothic UI", "Meiryo UI", var(--font-body); margin: 16px 0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mock { --m-bg: #202225; --m-ink: #e8e8e6; --m-muted: #a4aab0; --m-line: #34373c; --m-red: #f07a7a; --m-orange: #eba25c; --m-pg: #17181a; } }
+:root[data-theme="dark"] .mock { --m-bg: #202225; --m-ink: #e8e8e6; --m-muted: #a4aab0; --m-line: #34373c; --m-red: #f07a7a; --m-orange: #eba25c; --m-pg: #17181a; }
+.mock .head { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 14px; color: var(--m-muted); margin-bottom: 8px; }
+.mock .head b { color: var(--m-red); }
+.mock .since { font-size: 14px; background: var(--m-bg); border: 1px solid var(--m-line); border-radius: 8px; padding: 8px 14px; margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; }
+.mock .since .btn { margin-left: auto; }
+.mock .list { background: var(--m-bg); border: 1px solid var(--m-line); border-radius: 8px; margin-bottom: 10px; }
+.mock .sec { padding: 9px 14px 5px; font-size: 13px; font-weight: 700; color: var(--m-muted); display: flex; gap: 10px; align-items: baseline; }
+.mock .sec + .row { border-top-style: dashed; }
+.mock .sec .btn { margin-left: auto; font-weight: 400; }
+.mock .row { display: flex; gap: 12px; align-items: baseline; padding: 8px 14px; border-top: 1px solid var(--m-line); font-size: 15px; }
+.mock .t { flex: 1; min-width: 0; }
+.mock .q { font-size: 12px; color: var(--m-muted); margin-left: 6px; border: 1px solid var(--m-line); border-radius: 4px; padding: 0 5px; white-space: nowrap; }
+.mock .q.new { color: var(--m-ink); border-color: var(--m-ink); font-weight: 700; }
+.mock .where { font-size: 13px; color: var(--m-muted); margin-left: 8px; }
+.mock .d { font-size: 13px; white-space: nowrap; color: var(--m-muted); font-variant-numeric: tabular-nums; }
+.mock .d.red { color: var(--m-red); font-weight: 700; }
+.mock .d.org { color: var(--m-orange); font-weight: 700; }
+.mock .btn { font: inherit; font-size: 13px; border: 1px solid var(--m-line); background: var(--m-bg); color: var(--m-ink); border-radius: 6px; padding: 2px 10px; cursor: pointer; }
+.mock .btn:focus-visible { outline: 2px solid var(--accent); }
+.mock .fold { padding: 8px 14px; border-top: 1px solid var(--m-line); font-size: 13px; color: var(--m-muted); }
+.mock pre { margin: 0; padding: 10px 14px 12px; border-top: 1px solid var(--m-line); font: 13px/1.6 "BIZ UDGothic", Consolas, monospace; white-space: pre-wrap; color: var(--m-ink); }
+.mock .toast { white-space: pre-wrap; font-size: 13px; color: var(--m-muted); }
+.note { font-size: 13px; color: var(--muted); }
+</style>
+
+<div class="wrap">
+<h1>タスクビュー 機能案</h1>
+<p class="lead">2026-10-07。4 つの切り口で手分けして調べた結果をまとめた。似た道具（org-mode、Obsidian Tasks、Things、Microsoft To Do など）／毎日の仕事の習慣（GTD、報連相など）／会社の PC で Python の標準機能だけで何ができるか／AI が一覧を書く流れを生かす機能。出典はどれも公式のページや論文を開いて確かめている。</p>
+
+<h2>おすすめの進め方</h2>
+<ol class="steps">
+  <li><b>二重起動のバグを直す ＋ 画面を自動で最新にする</b><span>同じポートで 2 つ目のサーバーが黙って起動してしまう（手元で再現した）。自動起動を入れる前に直す必要がある。あわせて、30 秒ごとに md を読み直す。</span></li>
+  <li><b>AI の書き方を雛形で決める</b><span>待ちに「いつから」、日付の決まらない期限は <code>条件：</code>、要確認に理由。SIR0 の作業はなし。Claude が次から書くだけ。</span></li>
+  <li><b>急ぎタブを強くする</b><span>前回から変わったこと／催促候補（待ちが長いもの）／AI の推測を確認（全案件の要確認）／整理が要るもの。どれも Claude に貼る指示文をコピーできる。</span></li>
+  <li><b>週報の下書きをコピー</b><span>完了・遅れ・待ち・来週の期限から、貼れる文面を作る。</span></li>
+  <li><b>自動起動と通知</b><span>会社の PC で 1 回試してから決める（会社の設定で止められている可能性がある）。</span></li>
+</ol>
+
+<h2>見本：強くした「全案件の急ぎ」タブ</h2>
+<p>案件A〜D の見本データで作った見本。ボタンは押せる（コピーした文面は下に出る）。</p>
+
+<div class="mock" id="mock">
+  <div class="since"><span>前回（10/6 9:12）から：</span><span><b>新規 2</b></span><span>期限変更 1</span><span>完了 3</span><button class="btn" type="button" id="seen">見た</button></div>
+  <div class="head"><b>期限切れ 1</b><span>今日・明日 5</span><span>7日以内 8</span><span>4案件から</span></div>
+
+  <div class="list">
+    <div class="sec">期限切れ（1）</div>
+    <div class="row"><span class="t">決済APIの仕様差分をまとめる<span class="q">? 未確認</span><span class="where">案件A ・ PRJ-101</span></span><span class="d red">10/4 ・ 3日超過</span></div>
+    <div class="sec">今日・明日（5）</div>
+    <div class="row"><span class="t">通知文言の差し替え案を作る<span class="q new">新</span><span class="where">案件B ・ 配送アプリ改修</span></span><span class="d org">10/7 ・ 今日まで</span></div>
+    <div class="row"><span class="t">経費精算の申請<span class="where">案件A</span></span><span class="d org">10/8 ・ あと1日</span></div>
+    <div class="fold">▸ 7日以内 8件 ・ ▸ 8〜14日 4件</div>
+  </div>
+
+  <div class="list">
+    <div class="sec">催促候補（3営業日以上の待ち）<button class="btn" type="button" data-copy="nudge">催促メモをコピー</button></div>
+    <div class="row"><span class="t">佐藤さん：仕様書の最新版の共有<span class="where">案件A ・ PRJ-101</span></span><span class="d">10/1〜 ・ 6日待ち</span></div>
+    <div class="row"><span class="t">外部ベンダー：見積の回答<span class="where">案件A ・ PRJ-101</span></span><span class="d">9/30〜 ・ 7日待ち</span></div>
+  </div>
+
+  <div class="list">
+    <div class="sec">AI の推測を確認（6）<button class="btn" type="button" data-copy="check">Claude への指示をコピー</button></div>
+    <div class="row"><span class="t">決済APIの仕様差分をまとめる<span class="where">録音から推測：旧仕様書に抜けがある可能性</span></span><span class="d">案件A</span></div>
+    <div class="row"><span class="t">月次レポートの様式を決める<span class="where">メモに記載なし：宛先が誰か未確定</span></span><span class="d">案件A</span></div>
+    <div class="fold">▸ ほか 4件</div>
+  </div>
+
+  <div class="list">
+    <div class="sec">整理が要るもの（3）<button class="btn" type="button" data-copy="tidy">Claude への指示をコピー</button></div>
+    <div class="row"><span class="t">案件D の最終更新が 9 日前</span><span class="d">更新が古い</span></div>
+    <div class="row"><span class="t">「来週あたり」が日付として読めない<span class="where">案件B ・ 問い合わせ窓口の一覧を最新化する</span></span><span class="d">期限が読めない</span></div>
+    <div class="row"><span class="t">案件C に進行中のタスクがない（待ちだけ）</span><span class="d">止まっている</span></div>
+  </div>
+
+  <div class="list">
+    <div class="sec">週報の下書き<button class="btn" type="button" data-copy="weekly">文面をコピー</button></div>
+    <pre id="weekly">【案件A】10/1〜10/7
+■遅れ・延長
+・決済APIの仕様差分（10/4 期限 → 3日超過。旧仕様書の確認待ち）
+・本番切替の判断資料（10/2 → レビュー返信後に延長）
+■今週の完了
+・要件一覧の初版を作成（10/6）
+・キックオフに参加（10/1）
+■待ち・課題
+・佐藤さん：仕様書の最新版（10/1〜）
+■来週の期限
+・テスト環境の接続情報を共有（10/9）</pre>
+  </div>
+  <div class="toast" id="toast" aria-live="polite"></div>
+</div>
+<p class="note">「新」は太い枠の文字で示す（色は使わない）。色は今までどおり、期限の文字の赤（期限切れ）と橙（7日以内）だけ。</p>
+
+<h2>全部の候補</h2>
+<p><span class="pill top">おすすめ</span> は上の進め方に入れたもの。<span class="pill no">見送り</span> は理由つき。</p>
+<div class="tbl"><table>
+<thead><tr><th>機能</th><th>何がうれしいか</th><th>根拠</th><th>重さ</th><th></th></tr></thead>
+<tbody>
+<tr><td>二重起動の防止</td><td>今は 2 つ目のサーバーが黙って起動し、どちらの画面か分からなくなる。すでに動いていたらブラウザを開くだけにする</td><td class="src"><a href="https://learn.microsoft.com/en-us/windows/win32/winsock/using-so-reuseaddr-and-so-exclusiveaddruse">Microsoft: SO_REUSEADDR</a>（手元で再現済み）</td><td class="w">小</td><td><span class="pill bug">バグ</span></td></tr>
+<tr><td>画面を自動で最新に</td><td>Claude が md を書き換えても、再読み込みを押さなくてよい。まずは 30 秒ごとに読み直す</td><td class="src"><a href="https://html.spec.whatwg.org/multipage/server-sent-events.html">WHATWG: Server-sent events</a>（後から切り替え可）</td><td class="w">小</td><td><span class="pill top">おすすめ</span></td></tr>
+<tr><td>前回から変わったこと</td><td>毎朝、全部を読み直さずに、新規・期限変更・完了だけを見られる。AI が知らないうちに期限を変えても見落とさない</td><td class="src"><a href="https://www.microsoft.com/en-us/haxtoolkit/library/">Microsoft HAX ガイドライン G18（変更を知らせる）</a> ／ <a href="https://support.google.com/docs/answer/190843">Google ドキュメントの更新表示</a></td><td class="w">中</td><td><span class="pill top">おすすめ</span></td></tr>
+<tr><td>AI の推測を確認（全案件の要確認）</td><td>確かめる作業を 1 か所でまとめて済ませる。3 つの調査で別々に 1 位・上位になった</td><td class="src"><a href="https://pair.withgoogle.com/chapter/explainability-trust/">Google PAIR: Explainability + Trust</a> ／ <a href="https://www.nngroup.com/articles/ai-hallucinations/">NN/g: AI Hallucinations</a></td><td class="w">小</td><td><span class="pill top">おすすめ</span></td></tr>
+<tr><td>催促候補（待ちの日数）</td><td>「いつから待っているか」が出て、催促の判断がすぐできる。メールの返信は 9 割以上が 1 日以内に来るので、数日返事がないのは普通ではない</td><td class="src"><a href="https://gettingthingsdone.com/wp-content/uploads/2014/10/Weekly_Review_Checklist.pdf">GTD 週次レビュー</a> ／ <a href="https://arxiv.org/abs/1504.00704">Kooti ほか 2015（メール 1600 万件の分析）</a></td><td class="w">小</td><td><span class="pill top">おすすめ</span></td></tr>
+<tr><td>整理が要るもの</td><td>AI が書いた md の抜けを自動で見つける：読めない期限・由来なし・更新が古い・進行中がない案件・延長 2 回以上</td><td class="src"><a href="https://orgmode.org/manual/Stuck-projects.html">org-mode: Stuck projects</a> ／ <a href="https://publish.obsidian.md/tasks/Queries/Filters">Obsidian Tasks: invalid date</a></td><td class="w">小</td><td><span class="pill top">おすすめ</span></td></tr>
+<tr><td>Claude への指示をコピー</td><td>上の 3 つ（確認・催促・整理）を、Claude に貼る文面にして 1 クリックでコピー。直すのは Claude</td><td class="src"><a href="https://www.microsoft.com/en-us/haxtoolkit/library/">HAX G9（直しやすく）</a></td><td class="w">小</td><td><span class="pill top">おすすめ</span></td></tr>
+<tr><td>週報の下書き</td><td>毎週の手書きがほぼなくなる。報連相の定石どおり、悪い報告（遅れ・延長）を先頭に置く</td><td class="src"><a href="https://president.jp/articles/-/20173">PRESIDENT Online（報連相）</a> ／ <a href="https://biz.moneyforward.com/work-efficiency/basic/6687/">マネーフォワード（週報の項目）</a></td><td class="w">中</td><td><span class="pill top">おすすめ</span></td></tr>
+<tr><td>8〜14 日の先読み</td><td>7 日以内だけだと、気づいたときには遅い。人は「最悪の場合」の見積もりでも短く見積もる</td><td class="src"><a href="https://calnewport.com/drastically-reduce-stress-with-a-work-shutdown-ritual/">Cal Newport（終業前に 2 週間先を確認）</a> ／ <a href="https://bear.warrington.ufl.edu/brenner/mar7588/Papers/buehler-et-al-1994.pdf">Buehler ほか 1994（計画錯誤）</a></td><td class="w">小</td><td><span class="pill top">おすすめ</span></td></tr>
+<tr><td>由来から元のメモを開く</td><td>AI の書いたことを、元の議事録でその場で確かめられる。雛形に「由来に元メモへのリンクを書く」と足す</td><td class="src"><a href="https://orgmode.org/manual/Agenda-Commands.html">org-mode: Follow mode</a> ／ HAX G11</td><td class="w">中</td><td>次の候補</td></tr>
+<tr><td>全案件の完了ログ</td><td>直近 7 日の完了を日付順に。日報の材料と、Claude が完了を書いたかの確認に</td><td class="src"><a href="https://culturedcode.com/things/support/articles/4001304/">Things: Logbook</a></td><td class="w">小</td><td>次の候補</td></tr>
+<tr><td>期限ごとの予告期間</td><td>「11月末」の大物は 14 日前から急ぎに出す、など。Claude が <code>（14日前から）</code> と書く</td><td class="src"><a href="https://orgmode.org/manual/Deadlines-and-Scheduling.html">org-mode: Deadlines</a></td><td class="w">小</td><td>次の候補</td></tr>
+<tr><td>ログイン時に自動で起動</td><td>毎朝のダブルクリックが要らない。スタートアップに置くだけで、管理者権限は不要</td><td class="src"><a href="https://docs.python.org/3/using/windows.html">Python: Windows で使う</a></td><td class="w">小</td><td>会社で試す</td></tr>
+<tr><td>デスクトップ通知</td><td>画面を開かなくても期限に気づける。会社の設定で止められていると出ない</td><td class="src"><a href="https://learn.microsoft.com/en-us/windows/apps/design/shell/tiles-and-notifications/send-local-toast-desktop-cpp-wrl">Microsoft: トースト通知</a></td><td class="w">中</td><td>会社で試す</td></tr>
+<tr><td>検索・キー操作</td><td><code>/</code> で検索、数字キーでタブ切り替え（60% キーボードで打てるキーだけ）</td><td class="src">—</td><td class="w">小</td><td>あとで</td></tr>
+<tr><td>Outlook の予定表に入れる</td><td>取り込みはできるが、購読（自動更新）は Microsoft のサーバーから手元の PC に届かない。取り込み直しで重複する</td><td class="src"><a href="https://support.microsoft.com/en-us/office/import-or-subscribe-to-a-calendar-in-outlook-com-or-outlook-on-the-web-cff1429c-5af6-41ec-a5b4-74f2c278e98c">Microsoft: 予定表の購読</a></td><td class="w">中</td><td><span class="pill no">見送り</span></td></tr>
+<tr><td>今日やるものを手で選ぶ</td><td>Microsoft To Do の「今日の予定」の形。毎朝選ぶ手間が増え、タスクが少ない今は合わない</td><td class="src"><a href="https://support.microsoft.com/en-us/ToDo/my-day-and-suggestions">Microsoft To Do</a></td><td class="w">小</td><td><span class="pill no">見送り</span></td></tr>
+<tr><td>繰り返しのタスク</td><td>定例の作業は Claude が md に書けば済む</td><td class="src"><a href="https://publish.obsidian.md/tasks/Getting+Started/Recurring+Tasks">Obsidian Tasks</a></td><td class="w">中</td><td><span class="pill no">見送り</span></td></tr>
+</tbody></table></div>
+
+<h2>雛形に足すルール（Claude の書き方）</h2>
+<ul>
+  <li>待ち：<code>- 【PRJ-101】佐藤さん：仕様書の最新版の共有（10/1〜）</code> と、待ち始めた日を書く。</li>
+  <li>日付の決まらない期限：<code>条件：レビュー返信後</code> と書く。<code>来週</code> などは日付に直して書く。</li>
+  <li>要確認には理由を書く：<code>要確認（録音から推測）：…</code> <code>要確認（メモに記載なし）：…</code>。一律の警告より、その項目に結びついた説明のほうが信頼の判断に使える（NN/g・Google PAIR）。</li>
+  <li>由来には元のメモへのリンクを書く：<code>[10/2 定例](議事録/2026-10-02.md)</code>（「元のメモを開く」を入れるとき）。</li>
+</ul>
+<p class="note">会社では、今の <code>タスク一覧.md</code> はこのルールなしでもそのまま読める（足した書き方は、あれば使う）。</p>
+</div>
+
+<script>
+(function () {
+  var texts = {
+    nudge: "催促メモ\n・佐藤さん：仕様書の最新版の共有（10/1〜、6日待ち）案件A\n・外部ベンダー：見積の回答（9/30〜、7日待ち）案件A",
+    check: "案件A の タスク一覧.md で、次の「要確認」を元のメモと照らして、確定するか、私への質問にしてください。\n・決済APIの仕様差分をまとめる：旧仕様書に抜けがある可能性\n・月次レポートの様式を決める：宛先が誰か未確定",
+    tidy: "次の点を直してください。\n・案件D の タスク一覧.md：最終更新が 9 日前。最近の会議メモから更新してください\n・案件B「問い合わせ窓口の一覧を最新化する」：期限「来週あたり」を日付にしてください\n・案件C：進行中のタスクがありません。次にやることがあれば足してください",
+    weekly: null
+  };
+  var toast = document.getElementById("toast");
+  function show(msg) { toast.textContent = msg; }
+  document.querySelectorAll("#mock [data-copy]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var key = b.getAttribute("data-copy");
+      var text = key === "weekly" ? document.getElementById("weekly").textContent : texts[key];
+      var done = function () { show("コピーした：\n" + text.split("\n")[0] + " …"); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { show("コピーできなかった。見本の文面：" + text); });
+      } else { show("見本の文面：" + text); }
+    });
+  });
+  document.getElementById("seen").addEventListener("click", function (e) {
+    e.target.closest(".since").textContent = "前回（今）から：変化なし";
+    document.querySelectorAll("#mock .q.new").forEach(function (q) { q.remove(); });
+  });
+})();
+</script>

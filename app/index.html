@@ -318,7 +318,11 @@ function render() {
 async function load() {
   try {
     const res = await fetch("/api/tasks", { cache: "no-store" });
-    state.data = await res.json();
+    const data = await res.json();
+    // 開いたあとで画面のプログラムが新しくなっていたら、タブを開き直す（「再読み込み」だけでは古いままになる）
+    if (state.ui != null && data.ui != null && data.ui !== state.ui) { location.reload(); return; }
+    state.ui = data.ui;
+    state.data = data;
     render();
   } catch (e) {
     document.getElementById("main").replaceChildren(el("div", { class: "err" }, "読み込みに失敗しました: " + e));
